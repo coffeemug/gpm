@@ -8,6 +8,8 @@ import heapq
 
 REPO=None
 ISSUES=None
+CMPS=None
+TOKEN=None
 
 def print_basic_help():
     print 'List of commands:'
@@ -18,7 +20,7 @@ def print_basic_help():
     print 'Type `help COMMAND` for more information'
 
 def print_init_help():
-        print 'p init GITHUB_USER/GITHUB_REPO\n'
+        print 'p init GITHUB_USER/GITHUB_REPO [AUTH_TOKEN]\n'
         print """\tInitialize a new priority queue in the current
 \tdirectory (under `.p`) for the given GitHub repo"""
 
@@ -64,7 +66,7 @@ def cmd_help():
 
 def cmd_init():
     # Too many arguments
-    if len(sys.argv) > 3:
+    if len(sys.argv) > 4:
         print 'Unknown argument to `init`'
         print_init_help()
         return
@@ -81,8 +83,16 @@ def cmd_init():
             repo.write('\n')
         with open('issue_cache', 'w') as issue_cache:
             issue_cache.write(json.dumps({}))
+        with open('cmp_cache', 'w') as cmp_cache:
+            cmp_cache.write(json.dumps([]))
+        with open('token', 'w') as token:
+            if len(sys.argv) == 4:
+                token.write(sys.argv[3])
+        with open('.gitignore', 'w') as ignore:
+            ignore.write('token\n')
+            ignore.write('issue_cache\n')
     except:
-        print "Can't initialize the priority queue. Does one already exist?", sys.exc_info()[0]
+        print "Can't initialize the priority queue. Does one already exist?"
         return
 
     print """Successfully initialized the priority queue. Now run `p fetch` to
@@ -103,6 +113,15 @@ def setup_env(last_dir=None):
             issues = json.loads(issue_cache.read())
             for issue in issues:
                 ISSUES[int(issue)] = issues[issue]
+        with open('cmp_cache', 'r') as cmp_cache:
+            global CMPS
+            CMPS = {}
+            cmps = json.loads(cmp_cache.read())
+            for _cmp in cmps:
+                CMPS[tuple(_cmp[0])] = _cmp[1]
+        with open('token', 'r') as token:
+            global TOKEN
+            TOKEN = token.readline().strip()
     else:
         cwd = os.getcwd()
         os.chdir('..')
@@ -112,40 +131,98 @@ def cmd_fetch():
     setup_env()
     global REPO
     global ISSUES
+    global TOKEN
     url = 'https://api.github.com/repos/' + REPO + '/issues?state=open'
-    count = 0
-    new_count = 0
+    new_issues = {}
     while url:
-        # TODO: let the user specify a token on the command line
-        r = requests.get(url)
+        if TOKEN:
+            r = requests.get(url, auth=(TOKEN, 'x-oauth-basic'))
+        else:
+            r = requests.get(url)
         for issue in r.json():
-            count += 1
-            if not issue['number'] in ISSUES:
-                new_count += 1
-            ISSUES[issue['number']] = issue['title']
+            new_issues[issue['number']] = issue['title']
         if 'next' in r.links:
             url = r.links['next']['url']
         else:
             url = None
+    count = len(new_issues)
+    new_count = len(set(new_issues) - set(ISSUES))
+    closed_count = len(set(ISSUES) - set(new_issues))
+    ISSUES = new_issues
     with open('issue_cache', 'w') as issue_cache:
         issue_cache.write(json.dumps(ISSUES))
-    print 'Successfully fetched ' + str(count) + ' issues, ' + str(new_count) + ' updated'
+    print 'Successfully fetched ' + str(count) + ' issues, ' + str(new_count) + ' updated, ' + str(closed_count) + ' closed'
+
+def cache_store(i1, i2, c):
+    global CMPS
+    if i1.number > i2.number:
+        temp = i1
+        i1 = i2
+        i2 = temp
+        c *= -1
+    CMPS[(i1.number, i2.number)] = c
+    # now dump it
+    cmps = []
+    for _cmp in CMPS:
+        cmps.append([list(_cmp), CMPS[_cmp]])
+    with open('cmp_cache', 'w') as cmp_cache:
+        cmp_cache.write(json.dumps(cmps))
+
+def cache_lt(i1, i2):
+    global CMPS
+    if i1.number > i2.number:
+        temp = i1
+        i1 = i2
+        i2 = temp
+        return CMPS[(i1.number, i2.number)] == 1
+    else:
+        return CMPS[(i1.number, i2.number)] == -1
 
 def maybe_interactive_lt(i1, i2):
+    # Try a look up first
+    try:
+        return cache_lt(i1, i2)
+    except:
+        pass
+    # Couldn't look it up :(
     while True:
         print "Please pick which issue is more import:"
         print "[1]: #" + str(i1.number) + " - " + ISSUES[i1.number]
         print "[2]: #" + str(i2.number) + " - " + ISSUES[i2.number]
-        sys.stdout.write("1/2/=   > ")
-        res = sys.stdin.readline()[0]
-        if res == '1':
+        sys.stdout.write("12=[]fq?: ")
+        res = sys.stdin.readline()
+        print
+        if res == '':
+            sys.exit(0)
+        elif res[0] == 'q':
+            sys.exit(0)
+        elif res[0] == '1':
+            cache_store(i1, i2, -1)
             return True
-        elif res == '2':
+        elif res[0] == '2':
+            cache_store(i1, i2, 1)
             return False
-        elif res == '=':
-            return False
+        elif res[0] == '=':
+            cache_store(i1, i2, 0)
+            return i1.number < i2.number
+        elif res[0] == '[':
+            pass
+        elif res[0] == ']':
+            pass
+        elif res[0] == 'f':
+            pass
+        elif res[0] == '?':
+            print """1 - the first issue is more import
+2 - the second issue is more important
+= - both issues are equally important
+[ - forget the left issue (always treat it as unimportant)
+] - forget the right issue (always treat it as unimportant)
+f - forget both issues (always treat them as unimportant)
+q - quit
+? - print this help
+"""
         else:
-            print "This is hard enough without bad input"
+            sys.stdout.write("This is hard enough without bad input. ")
 
 class Issue:
     def __init__(self, number):
