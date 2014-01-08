@@ -100,7 +100,7 @@ def print_issues(issues):
     for issue in issues:
         number = issue
         issue = issues[number]
-        print number.rjust(4) + ' - ' + str(issue['title']).ljust(100) + ' [' + str(issue['owner']) + ', ' + str(issue['milestone']) + ']'
+        print (number + ' ').rjust(5) + str(issue['title']).ljust(100) + ' [' + str(issue['owner']) + ', ' + str(issue['milestone']) + ']'
 
 def browse_issues(issues, config):
     base_url = 'https://github.com/' + config['user'] + '/' + config['repo'] + '/issues/'
@@ -144,7 +144,7 @@ def main():
         browse_issues(issues, config)
     else:
         print_issues(filter_issues(issues, args))
-    print 'Found ' + str(len(issues)) + ' issues'
+    print '* Found ' + str(len(issues)) + ' issues'
 
 if __name__ == '__main__':
     main()
