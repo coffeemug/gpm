@@ -13,7 +13,8 @@ ISSUES=None
 def print_basic_help():
     print 'List of commands:'
     print '\thelp\t\tPrint this help'
-    print '\tinit\t\tInitialize a new mirror for a GitHub repo'
+    print '\ttoken\t\tSet a token for repo access'
+    print '\tadd\t\tAdd a repo'
     print '\tfetch\t\tFetch the latest set of issues'
     print '\tfilter\t\tFilter issues by various criteria'
     print 'Type `help COMMAND` for more information'
