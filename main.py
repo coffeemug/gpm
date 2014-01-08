@@ -22,7 +22,7 @@ def init_arg_parser():
     ## Filters
     parser.add_argument('-o', '--owner', action='append', help='the owner of the issue; pass multiple for a disjunction')
     parser.add_argument('-m', '--milestone', action='append', help='the milestone of the issue; pass multiple for a disjunction')
-    #parser.add_argument('-l', '--labels', nargs='+', action='append', help='the labels on the issue; pass list for a conjunction; pass multiple for a disjunction')
+    parser.add_argument('-l', '--labels', nargs='+', action='append', help='the labels on the issue; pass list for a conjunction; pass multiple for a disjunction')
 
     return parser
 
@@ -87,6 +87,9 @@ def fetch_issues(config):
                 _issue['owner'] = issue['assignee']['login']
             if 'milestone' in issue and issue['milestone']:
                 _issue['milestone'] = issue['milestone']['title']
+            _issue['labels'] = []
+            for label in issue['labels']:
+                _issue['labels'].append(label['name'])
             issues[issue['number']] = _issue
         if 'next' in r.links:
             url = r.links['next']['url']
@@ -96,11 +99,21 @@ def fetch_issues(config):
     cache_issues(config, issues)
     return issues
 
+def str_labels(labels):
+    if not labels:
+        return 'None'
+    res = ''
+    for label in labels[:-1]:
+        res += label
+        res += ', '
+    res += labels[-1:][0]
+    return res
+
 def print_issues(issues):
     for issue in issues:
         number = issue
         issue = issues[number]
-        print (number + ' ').rjust(5) + str(issue['title'][:100]).ljust(100) + ' [' + str(issue['owner']) + ', ' + str(issue['milestone']) + ']'
+        print (number + ' ').rjust(5) + str(issue['title'][:80]).ljust(80) + '   ' + (str(issue['owner']) + ', ' + str(issue['milestone'])).ljust(20) + '   ' + str_labels(issue['labels'])
 
 def browse_issues(issues, config):
     base_url = 'https://github.com/' + config['user'] + '/' + config['repo'] + '/issues/'
