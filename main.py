@@ -5,6 +5,7 @@ import os
 import requests
 import json
 import argparse
+import webbrowser
 
 CONFIG_DIR_PATH = os.path.join(os.path.expanduser('~'), '.gpm')
 CONFIG_FILE_PATH = os.path.join(CONFIG_DIR_PATH, 'config')
@@ -102,6 +103,11 @@ def print_issues(issues):
         print '* [#' + number + '] ' + str(issue['title'])
         print '  Owner: ' + str(issue['owner']) + ', Milestone: ' + str(issue['milestone'])
 
+def browse_issues(issues, config):
+    base_url = 'https://github.com/' + config['user'] + '/' + config['repo'] + '/issues/'
+    for issue in issues:
+        webbrowser.open_new_tab(base_url + str(issue))
+
 def process_args(args):
     if args['owner']:
         args['owner'] = map(lambda x: x.lower(), args['owner'])
@@ -134,8 +140,12 @@ def main():
         sys.exit(-1)
     if args['fetch']:
         fetch_issues(config)
-    issues = load_issues(config)
-    print_issues(filter_issues(issues, args))
+    issues = filter_issues(load_issues(config), args)
+    if args['browser']:
+        browse_issues(issues, config)
+    else:
+        print_issues(filter_issues(issues, args))
+    print 'Found ' + str(len(issues)) + ' issues'
 
 if __name__ == '__main__':
     main()
