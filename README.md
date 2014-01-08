@@ -28,4 +28,9 @@ gpm -o mlucy -o srh -l reql high -m 12 -m x
 # Get all open issues owned by mlucy or srh with labels `reql` and
 # without the label `high` in milestones 1.12 or 1.11.x
 gpm -o mlucy -o srh -l reql ~high -m 12 -m x
+
+# Get all open issues owned by mlucy or srh with labels `reql` and
+# without the label `high` in milestones 1.12 or 1.11.x and open them
+# all in your web browser
+gpm -o mlucy -o srh -l reql ~high -m 12 -m x -b
 ```
