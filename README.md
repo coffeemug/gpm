@@ -2,7 +2,7 @@ gpm
 =
 
 A nice way to query github issues for project management work. I refer
-to it as `gpm` (github product management) below, but you'd have to
+to it as `gpm` (github project management) below, but you'd have to
 create an alias to `main.py` (I'm too lazy to setup a proper
 installer/packager).
 
