@@ -127,7 +127,7 @@ def process_args(args):
         args['milestone'] = map(lambda x: x.lower(), args['milestone'])
     return args
 
-def in_args(value, arglist):
+def in_args(value, arglist, conj=False):
     value = str(value).lower()
     for arg in arglist:
         neg = False
@@ -135,7 +135,18 @@ def in_args(value, arglist):
             arg = arg[1:]
             neg = True
         found = value.find(arg) != -1
-        if (not neg and found) or (neg and not found):
+        res = (not neg and found) or (neg and not found)
+        if not conj and res:
+            return True
+        if conj and not res:
+            return False
+    return conj
+
+def check_labels(issue, args):
+    for label_conj in args['labels']:
+        if not in_args(issue['labels'], label_conj, conj=True):
+            continue
+        else:
             return True
     return False
 
@@ -150,6 +161,8 @@ def filter_issues(issues, args):
         if args['milestone']:
             if not in_args(issue['milestone'], args['milestone']):
                 continue
+        if args['labels'] and not check_labels(issue, args):
+            continue
         _issues[number] = issue
     return _issues
 
@@ -168,7 +181,7 @@ def main():
     if args['browser']:
         browse_issues(issues, config)
     else:
-        print_issues(filter_issues(issues, args))
+        print_issues(issues)
     print '* Found ' + str(len(issues)) + ' issues'
 
 if __name__ == '__main__':
