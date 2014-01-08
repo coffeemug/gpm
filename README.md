@@ -1,4 +1,4 @@
-p
+gpm
 =
 
-A priority queue for github issues
+A nicer way to query github issues for my pm work
