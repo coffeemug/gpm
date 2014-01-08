@@ -7,32 +7,30 @@ import json
 import heapq
 
 REPO=None
-ISSUES=None
-CMPS=None
 TOKEN=None
+ISSUES=None
 
 def print_basic_help():
     print 'List of commands:'
     print '\thelp\t\tPrint this help'
-    print '\tinit\t\tInitialize a new priority queue for a GitHub repo'
+    print '\tinit\t\tInitialize a new mirror for a GitHub repo'
     print '\tfetch\t\tFetch the latest set of issues'
-    print '\ttop\t\tPrint the most important issues'
+    print '\tfilter\t\tFilter issues by various criteria'
     print 'Type `help COMMAND` for more information'
 
 def print_init_help():
-        print 'p init GITHUB_USER/GITHUB_REPO [AUTH_TOKEN]\n'
-        print """\tInitialize a new priority queue in the current
+        print 'pm init GITHUB_USER/GITHUB_REPO [AUTH_TOKEN]\n'
+        print """\tInitialize a new GitHub issues mirror in the current
 \tdirectory (under `.p`) for the given GitHub repo"""
 
 def print_fetch_help():
-        print 'p fetch\n'
+        print 'pm fetch\n'
         print """\tFetch the latest set of issues from GitHub"""
 
-def print_top_help():
-        print 'p top\n'
+def print_filter_help():
+        print 'pm filter\n'
 
-        print """\tPrint top 10 most important issues. Might require interactive
-\trating if not enough issues are rated to generate the top list"""
+        print """TODO"""
 
 def cmd_help():
     # Too many arguments
@@ -57,8 +55,8 @@ def cmd_help():
         print_fetch_help()
         return
     # The user wants help for `top`
-    if len(sys.argv) == 3 and sys.argv[2] == 'top':
-        print_top_help()
+    if len(sys.argv) == 3 and (sys.argv[2] == 'filter' or sys.argv[2] == 'f'):
+        print_filter_help()
         return
     # We can't help the user
     print 'Unknown argument to `help`'
@@ -83,8 +81,6 @@ def cmd_init():
             repo.write('\n')
         with open('issue_cache', 'w') as issue_cache:
             issue_cache.write(json.dumps({}))
-        with open('cmp_cache', 'w') as cmp_cache:
-            cmp_cache.write(json.dumps([]))
         with open('token', 'w') as token:
             if len(sys.argv) == 4:
                 token.write(sys.argv[3])
@@ -95,7 +91,7 @@ def cmd_init():
         print "Can't initialize the priority queue. Does one already exist?"
         return
 
-    print """Successfully initialized the priority queue. Now run `p fetch` to
+    print """Successfully initialized the priority queue. Now run `pm fetch` to
 fetch latest issues"""
 
 def setup_env(last_dir=None):
@@ -113,12 +109,6 @@ def setup_env(last_dir=None):
             issues = json.loads(issue_cache.read())
             for issue in issues:
                 ISSUES[int(issue)] = issues[issue]
-        with open('cmp_cache', 'r') as cmp_cache:
-            global CMPS
-            CMPS = {}
-            cmps = json.loads(cmp_cache.read())
-            for _cmp in cmps:
-                CMPS[tuple(_cmp[0])] = _cmp[1]
         with open('token', 'r') as token:
             global TOKEN
             TOKEN = token.readline().strip()
@@ -153,93 +143,8 @@ def cmd_fetch():
         issue_cache.write(json.dumps(ISSUES))
     print 'Successfully fetched ' + str(count) + ' issues, ' + str(new_count) + ' updated, ' + str(closed_count) + ' closed'
 
-def cache_store(i1, i2, c):
-    global CMPS
-    if i1.number > i2.number:
-        temp = i1
-        i1 = i2
-        i2 = temp
-        c *= -1
-    CMPS[(i1.number, i2.number)] = c
-    # now dump it
-    cmps = []
-    for _cmp in CMPS:
-        cmps.append([list(_cmp), CMPS[_cmp]])
-    with open('cmp_cache', 'w') as cmp_cache:
-        cmp_cache.write(json.dumps(cmps))
-
-def cache_lt(i1, i2):
-    global CMPS
-    if i1.number > i2.number:
-        temp = i1
-        i1 = i2
-        i2 = temp
-        return CMPS[(i1.number, i2.number)] == 1
-    else:
-        return CMPS[(i1.number, i2.number)] == -1
-
-def maybe_interactive_lt(i1, i2):
-    # Try a look up first
-    try:
-        return cache_lt(i1, i2)
-    except:
-        pass
-    # Couldn't look it up :(
-    while True:
-        print "Please pick which issue is more import:"
-        print "[1]: #" + str(i1.number) + " - " + ISSUES[i1.number]
-        print "[2]: #" + str(i2.number) + " - " + ISSUES[i2.number]
-        sys.stdout.write("12=[]fq?: ")
-        res = sys.stdin.readline()
-        print
-        if res == '':
-            sys.exit(0)
-        elif res[0] == 'q':
-            sys.exit(0)
-        elif res[0] == '1':
-            cache_store(i1, i2, -1)
-            return True
-        elif res[0] == '2':
-            cache_store(i1, i2, 1)
-            return False
-        elif res[0] == '=':
-            cache_store(i1, i2, 0)
-            return i1.number < i2.number
-        elif res[0] == '[':
-            pass
-        elif res[0] == ']':
-            pass
-        elif res[0] == 'f':
-            pass
-        elif res[0] == '?':
-            print """1 - the first issue is more import
-2 - the second issue is more important
-= - both issues are equally important
-[ - forget the left issue (always treat it as unimportant)
-] - forget the right issue (always treat it as unimportant)
-f - forget both issues (always treat them as unimportant)
-q - quit
-? - print this help
-"""
-        else:
-            sys.stdout.write("This is hard enough without bad input. ")
-
-class Issue:
-    def __init__(self, number):
-        self.number = number
-    def __lt__(self, other):
-        return maybe_interactive_lt(self, other)
-
-def cmd_top():
+def cmd_filter():
     setup_env()
-    global ISSUES
-    issues = []
-    for issue in ISSUES:
-        issues.append(Issue(issue))
-    k = 10
-    smallest = heapq.nsmallest(k, issues)
-    for i in xrange(0, k):
-        print "[" + str(i + 1) + "]: #" + str(smallest[i].number) + " - " + ISSUES[smallest[i].number]
 
 def main():
     # Help
@@ -255,8 +160,8 @@ def main():
         cmd_fetch()
         return
     # Top
-    if sys.argv[1] == 'top':
-        cmd_top()
+    if sys.argv[1] == 'filter' or sys.argv[1] == 'f':
+        cmd_filter()
         return
     print 'Unknown command'
     cmd_help()
