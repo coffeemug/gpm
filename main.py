@@ -144,7 +144,10 @@ def in_args(value, arglist, conj=False):
 
 def check_labels(issue, args):
     for label_conj in args['labels']:
-        if not in_args(issue['labels'], label_conj, conj=True):
+        labels = issue['labels']
+        if labels == []:
+            labels = None
+        if not in_args(labels, label_conj, conj=True):
             continue
         else:
             return True
