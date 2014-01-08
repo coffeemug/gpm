@@ -117,7 +117,12 @@ def process_args(args):
 def in_args(value, arglist):
     value = str(value).lower()
     for arg in arglist:
-        if value.find(arg) != -1:
+        neg = False
+        if arg[0] == '~':
+            arg = arg[1:]
+            neg = True
+        found = value.find(arg) != -1
+        if (not neg and found) or (neg and not found):
             return True
     return False
 
