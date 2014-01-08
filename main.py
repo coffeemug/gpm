@@ -102,22 +102,29 @@ def print_issues(issues):
         print '* [#' + number + '] ' + str(issue['title'])
         print '  Owner: ' + str(issue['owner']) + ', Milestone: ' + str(issue['milestone'])
 
+def process_args(args):
+    if args['owner']:
+        args['owner'] = map(lambda x: x.lower(), args['owner'])
+    if args['milestone']:
+        args['milestone'] = map(lambda x: x.lower(), args['milestone'])
+    return args
+
 def filter_issues(issues, args):
     _issues = {}
     for issue in issues:
         number = issue
         issue = issues[number]
         if args['owner']:
-            if issue['owner'] not in args['owner']:
+            if str(issue['owner']).lower() not in args['owner']:
                 continue
         if args['milestone']:
-            if issue['milestone'] not in args['milestone']:
+            if str(issue['milestone']).lower() not in args['milestone']:
                 continue
         _issues[number] = issue
     return _issues
 
 def main():
-    args = vars(init_arg_parser().parse_args())
+    args = process_args(vars(init_arg_parser().parse_args()))
     config = save_config(cache_args_in_config(load_config(), args))
     if 'user' not in config:
         print 'Please specify the user/org'
