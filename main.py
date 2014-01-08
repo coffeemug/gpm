@@ -100,7 +100,7 @@ def print_issues(issues):
     for issue in issues:
         number = issue
         issue = issues[number]
-        print (number + ' ').rjust(5) + str(issue['title']).ljust(100) + ' [' + str(issue['owner']) + ', ' + str(issue['milestone']) + ']'
+        print (number + ' ').rjust(5) + str(issue['title'][:100]).ljust(100) + ' [' + str(issue['owner']) + ', ' + str(issue['milestone']) + ']'
 
 def browse_issues(issues, config):
     base_url = 'https://github.com/' + config['user'] + '/' + config['repo'] + '/issues/'
@@ -114,16 +114,23 @@ def process_args(args):
         args['milestone'] = map(lambda x: x.lower(), args['milestone'])
     return args
 
+def in_args(value, arglist):
+    value = str(value).lower()
+    for arg in arglist:
+        if value.find(arg) != -1:
+            return True
+    return False
+
 def filter_issues(issues, args):
     _issues = {}
     for issue in issues:
         number = issue
         issue = issues[number]
         if args['owner']:
-            if str(issue['owner']).lower() not in args['owner']:
+            if not in_args(issue['owner'], args['owner']):
                 continue
         if args['milestone']:
-            if str(issue['milestone']).lower() not in args['milestone']:
+            if not in_args(issue['milestone'], args['milestone']):
                 continue
         _issues[number] = issue
     return _issues
