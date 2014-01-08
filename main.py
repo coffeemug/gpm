@@ -4,64 +4,12 @@ import sys
 import os
 import requests
 import json
-import heapq
+import argparse
 
+USER=None
 REPO=None
 TOKEN=None
 ISSUES=None
-
-def print_basic_help():
-    print 'List of commands:'
-    print '\thelp\t\tPrint this help'
-    print '\ttoken\t\tSet a token for repo access'
-    print '\tadd\t\tAdd a repo'
-    print '\tfetch\t\tFetch the latest set of issues'
-    print '\tfilter\t\tFilter issues by various criteria'
-    print 'Type `help COMMAND` for more information'
-
-def print_init_help():
-        print 'pm init GITHUB_USER/GITHUB_REPO [AUTH_TOKEN]\n'
-        print """\tInitialize a new GitHub issues mirror in the current
-\tdirectory (under `.p`) for the given GitHub repo"""
-
-def print_fetch_help():
-        print 'pm fetch\n'
-        print """\tFetch the latest set of issues from GitHub"""
-
-def print_filter_help():
-        print 'pm filter\n'
-
-        print """TODO"""
-
-def cmd_help():
-    # Too many arguments
-    if len(sys.argv) > 3:
-        print 'Unknown argument to `help`'
-        print_basic_help()
-        return
-    # The user just wants some help
-    if len(sys.argv) == 1 or len(sys.argv) == 2:
-        print_basic_help()
-        return
-    # The user wants help for `help`
-    if len(sys.argv) == 3 and sys.argv[2] == 'help':
-        print_basic_help()
-        return
-    # The user wants help for `init`
-    if len(sys.argv) == 3 and sys.argv[2] == 'init':
-        print_init_help()
-        return
-    # The user wants help for `fetch`
-    if len(sys.argv) == 3 and sys.argv[2] == 'fetch':
-        print_fetch_help()
-        return
-    # The user wants help for `top`
-    if len(sys.argv) == 3 and (sys.argv[2] == 'filter' or sys.argv[2] == 'f'):
-        print_filter_help()
-        return
-    # We can't help the user
-    print 'Unknown argument to `help`'
-    print_basic_help()
 
 def cmd_init():
     # Too many arguments
@@ -144,28 +92,26 @@ def cmd_fetch():
         issue_cache.write(json.dumps(ISSUES))
     print 'Successfully fetched ' + str(count) + ' issues, ' + str(new_count) + ' updated, ' + str(closed_count) + ' closed'
 
-def cmd_filter():
-    setup_env()
+def init_arg_parser():
+    parser = argparse.ArgumentParser(description='Query github issues.')
+    ## Basic access configuration
+    parser.add_argument('-t', '--token', help='a github token to use (cached)')
+    parser.add_argument('-u', '--user', help='a github user or organization to use (cached)')
+    parser.add_argument('-r', '--repo', help='a github repo to use (cached)')
+    ## Additional controls
+    parser.add_argument('-f', '--fetch', action='store_true', help='fetch updates from github')
+    parser.add_argument('-b', '--browser', action='store_true', help='open issue list in the browser')
+    ## Filters
+    parser.add_argument('-s', '--status', choices=['open', 'closed', 'all'], default='open', help='which issues to show (defaults to open)')
+    parser.add_argument('-o', '--owner', action='append', help='the owner of the issue; pass multiple for a disjunction')
+    parser.add_argument('-m', '--milestone', action='append', help='the milestone of the issue; pass multiple for a disjunction')
+    #parser.add_argument('-l', '--labels', nargs='+', action='append', help='the labels on the issue; pass list for a conjunction; pass multiple for a disjunction')
+
+    return parser
 
 def main():
-    # Help
-    if len(sys.argv) == 1 or sys.argv[1] == 'help' or sys.argv[1] == '--help':
-        cmd_help()
-        return
-    # Init
-    if sys.argv[1] == 'init':
-        cmd_init()
-        return
-    # Fetch
-    if sys.argv[1] == 'fetch':
-        cmd_fetch()
-        return
-    # Top
-    if sys.argv[1] == 'filter' or sys.argv[1] == 'f':
-        cmd_filter()
-        return
-    print 'Unknown command'
-    cmd_help()
+    args = init_arg_parser().parse_args()
+    print args
 
 if __name__ == '__main__':
     main()
